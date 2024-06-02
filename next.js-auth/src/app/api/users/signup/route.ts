@@ -2,9 +2,11 @@ import dbConnect from "@/dbconfig/dbConfig";
 import User from "@/models/userModels"
 import { NextRequest, NextResponse} from "next/server"
 import bcryptjs from "bcryptjs"
+import sendEmail from "@/helper/Mailer";
 
 const POST = async (request: NextRequest) => {
     try {
+        await dbConnect();
         const reqBody = await request.json();
         const { username, email, password } = reqBody;
 
@@ -14,9 +16,8 @@ const POST = async (request: NextRequest) => {
             return NextResponse.json({error: "user Email already Exist"}, {status: 400});
         }
         else{
-            const bcrypt = require('bcryptjs');
-            const salt = bcrypt.genSalt(10);
-            const hashPassword = bcrypt.hashSync(password, salt);
+            const salt: any = bcryptjs.genSalt(10);
+            const hashPassword = bcryptjs.hashSync(password, salt);
               
             const newUser = new user({
                 username,
@@ -25,7 +26,15 @@ const POST = async (request: NextRequest) => {
             })
 
             const savedUser = await newUser.save();
-             return NextResponse.json({message:"user created successfully"}, {status: 201})
+            console.log(savedUser);
+
+            // Verify Email
+            const verifyUser = await sendEmail({ email, emailType: "VERIFY", userId: savedUser._id })
+            return NextResponse.json({
+                message: "User created successfully",
+                success: true,
+                savedUser
+            }, { status: 201 });
         }
        
     } catch (error: any) {
